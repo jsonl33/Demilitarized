@@ -105,6 +105,8 @@ namespace StarterAssets
 #endif
             }
         }
+        private float defaultMoveSpeed;
+        private float defaultSprintSpeed;
 
         private void Awake()
         {
@@ -142,7 +144,11 @@ namespace StarterAssets
 
             // Cache the camera, Camera.main is an expensive operation
             mainCamera = Camera.main;
+            defaultMoveSpeed = MoveSpeed;
+            defaultSprintSpeed = SprintSpeed;
+
         }
+
 
         private void Update()
         {
@@ -153,6 +159,13 @@ namespace StarterAssets
             if (_input.aim)
             {
                 Aim();
+                MoveSpeed = 1.3f;
+                SprintSpeed = 1.3f;
+            }
+            else
+            {
+                MoveSpeed = defaultMoveSpeed;
+                SprintSpeed = defaultSprintSpeed;
             }
             JumpAndGravity();
             GroundedCheck();
@@ -392,7 +405,6 @@ namespace StarterAssets
 
                 direction.y = 0;
                 transform.forward = direction.normalized;
-
             }
         }
 
