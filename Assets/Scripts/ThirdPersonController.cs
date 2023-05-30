@@ -21,6 +21,11 @@ namespace StarterAssets
         [Tooltip("Sprint speed of the character in m/s")]
         public float SprintSpeed = 5.335f;
 
+        private float defaultMoveSpeed;
+        private float defaultSprintSpeed;
+        [SerializeField] private float aimMoveSpeed = 1.3f;
+        [SerializeField] private float aimSprintSpeed = 1.3f;
+
         [Tooltip("How fast the character turns to face movement direction")]
         [Range(0.0f, 0.3f)]
         public float RotationSmoothTime = 0.12f;
@@ -105,8 +110,6 @@ namespace StarterAssets
 #endif
             }
         }
-        private float defaultMoveSpeed;
-        private float defaultSprintSpeed;
 
         private void Awake()
         {
@@ -159,8 +162,8 @@ namespace StarterAssets
             if (_input.aim)
             {
                 Aim();
-                MoveSpeed = 1.3f;
-                SprintSpeed = 1.3f;
+                MoveSpeed = aimMoveSpeed;
+                SprintSpeed = aimSprintSpeed;
             }
             else
             {
