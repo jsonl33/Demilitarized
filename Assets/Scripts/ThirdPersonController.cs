@@ -60,25 +60,8 @@ namespace StarterAssets
         [Tooltip("What layers the character uses as ground")]
         public LayerMask GroundLayers;
 
-        [Header("Cinemachine")]
-        [Tooltip("The follow target set in the Cinemachine Virtual Camera that the camera will follow")]
-        public GameObject CinemachineCameraTarget;
-
-        [Tooltip("How far in degrees can you move the camera up")]
-        public float TopClamp = 70.0f;
-
-        [Tooltip("How far in degrees can you move the camera down")]
-        public float BottomClamp = -30.0f;
-
-        [Tooltip("Additional degress to override the camera. Useful for fine tuning camera position when locked")]
-        public float CameraAngleOverride = 0.0f;
-
         [Tooltip("For locking the camera position on all axis")]
-        public bool LockCameraPosition = false;
-
-        // cinemachine
-        private float _cinemachineTargetYaw;
-        private float _cinemachineTargetPitch;
+        public bool LockCameraPosition = true;
 
         // player
         private float _speed;
@@ -123,7 +106,6 @@ namespace StarterAssets
             }
         }
 
-
         private void Awake()
         {
             // get a reference to our main camera
@@ -133,9 +115,14 @@ namespace StarterAssets
             }
         }
 
+        #region Private Fields
+
+        private Camera mainCamera;
+
+        #endregion
         private void Start()
         {
-            _cinemachineTargetYaw = CinemachineCameraTarget.transform.rotation.eulerAngles.y;
+            // _cinemachineTargetYaw = CinemachineCameraTarget.transform.rotation.eulerAngles.y;
 
             _hasAnimator = TryGetComponent(out _animator);
             _controller = GetComponent<CharacterController>();
@@ -151,12 +138,22 @@ namespace StarterAssets
             // reset our timeouts on start
             _jumpTimeoutDelta = JumpTimeout;
             _fallTimeoutDelta = FallTimeout;
+
+
+            // Cache the camera, Camera.main is an expensive operation
+            mainCamera = Camera.main;
         }
 
         private void Update()
         {
             _hasAnimator = TryGetComponent(out _animator);
 
+            GetMousePosition();
+            // If right mouse button is pressed, then aim.
+            if (_input.aim)
+            {
+                Aim();
+            }
             JumpAndGravity();
             GroundedCheck();
             Move();
@@ -164,7 +161,7 @@ namespace StarterAssets
 
         private void LateUpdate()
         {
-            CameraRotation();
+
         }
 
         private void AssignAnimationIDs()
@@ -189,27 +186,6 @@ namespace StarterAssets
             {
                 _animator.SetBool(_animIDGrounded, Grounded);
             }
-        }
-
-        private void CameraRotation()
-        {
-            // if there is an input and camera position is not fixed
-            if (_input.look.sqrMagnitude >= _threshold && !LockCameraPosition)
-            {
-                //Don't multiply mouse input by Time.deltaTime;
-                float deltaTimeMultiplier = IsCurrentDeviceMouse ? 1.0f : Time.deltaTime;
-
-                _cinemachineTargetYaw += _input.look.x * deltaTimeMultiplier * Sensitivity;
-                _cinemachineTargetPitch += _input.look.y * deltaTimeMultiplier * Sensitivity;
-            }
-
-            // clamp our rotations so our values are limited 360 degrees
-            _cinemachineTargetYaw = ClampAngle(_cinemachineTargetYaw, float.MinValue, float.MaxValue);
-            _cinemachineTargetPitch = ClampAngle(_cinemachineTargetPitch, BottomClamp, TopClamp);
-
-            // Cinemachine will follow this target
-            CinemachineCameraTarget.transform.rotation = Quaternion.Euler(_cinemachineTargetPitch + CameraAngleOverride,
-                _cinemachineTargetYaw, 0.0f);
         }
 
         private void Move()
@@ -349,13 +325,6 @@ namespace StarterAssets
             }
         }
 
-        private static float ClampAngle(float lfAngle, float lfMin, float lfMax)
-        {
-            if (lfAngle < -360f) lfAngle += 360f;
-            if (lfAngle > 360f) lfAngle -= 360f;
-            return Mathf.Clamp(lfAngle, lfMin, lfMax);
-        }
-
         private void OnDrawGizmosSelected()
         {
             Color transparentGreen = new Color(0.0f, 1.0f, 0.0f, 0.35f);
@@ -394,5 +363,38 @@ namespace StarterAssets
                 AudioSource.PlayClipAtPoint(LandingAudioClip, transform.TransformPoint(_controller.center), FootstepAudioVolume);
             }
         }
+
+        private (bool success, Vector3 position) GetMousePosition()
+        {
+            var ray = mainCamera.ScreenPointToRay(_input.look);
+
+            if (Physics.Raycast(ray, out var hitInfo, Mathf.Infinity, GroundLayers))
+            {
+                // The Raycast hit something, return with the position.
+                return (success: true, position: hitInfo.point);
+            }
+            else
+            {
+                // The Raycast did not hit anything.
+                return (success: false, position: Vector3.zero);
+            }
+        }
+
+        public void Aim()
+        {
+            Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
+            Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
+
+            if (groundPlane.Raycast(ray, out float position))
+            {
+                Vector3 worldPosition = ray.GetPoint(position);
+                Vector3 direction = worldPosition - transform.position;
+
+                direction.y = 0;
+                transform.forward = direction.normalized;
+
+            }
+        }
+
     }
 }
